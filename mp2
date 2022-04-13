@@ -13,4 +13,15 @@ resource "aws_vpc" "vpc10am" {
   }
 }
 
-----vpc location 
+----vpc location
+
+resource "aws_subnet" "pubsubnet" {
+  vpc_id     = aws_vpc.vpc10am.id
+  cidr_block = "10.0.1.0/24" 
+
+  tags = {
+    Name = "pub"
+  }
+} 
+
+----- pvt subnet 

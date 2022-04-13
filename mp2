@@ -35,3 +35,108 @@ resource "aws_subnet" "pvtsubnet" {
     Name = "pvt"
   }
 } 
+
+resource "aws_internet_gateway" "gatewayi" {
+  vpc_id = aws_vpc.vpc10am.id
+
+  tags = {
+    Name = "gateway"
+  }
+}
+
+resource "aws_route_table" "pubrt" {
+  vpc_id = aws_vpc.vpc10am.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gatewayi.id
+  }
+
+  tags = {
+    Name = "prt"
+  }
+}
+
+resource "aws_route_table_association" "rtapub" {
+  subnet_id      = aws_subnet.pubsubnet.id
+  route_table_id = aws_route_table.pubrt.id
+}
+
+resource "aws_eip" "awseip" {
+  vpc      = true 
+}
+
+resource "aws_nat_gateway" "mynat" {
+  allocation_id = aws_eip.awseipo.id
+  subnet_id     = aws_subnet.pubsubnet.id
+  tags = {
+    Name = "natgtw"
+  }
+}
+
+resource "aws_route_table" "pvtrt" {
+  vpc_id = aws_vpc.vpc10am.id
+
+  route {
+    cidr_block = "10.0.1.0/24"
+    gateway_id = aws_nat_gateway.mynat.id
+  }
+
+  tags = {
+    Name = "prt"
+  }
+}
+
+resource "aws_route_table_association" "rtapvt" {
+  subnet_id      = aws_subnet.pvtsubnet.id
+  route_table_id = aws_route_table.pvtrt.id
+}
+
+resource "aws_security_group" "allow_all" {
+  name        = "allow_all"
+  description = "Allow TLS inbound traffic"
+  vpc_id      = aws_vpc.vpc10am.id
+
+  ingress {
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+    ingress {
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "allow_all"
+  }
+}
+
+resource "aws_instance" "publicmachine" {
+  ami                         =  "ami-04893cdb768d0f9ee"
+  instance_type               =  "t2.micro"  
+  subnet_id                   =  aws_subnet.pubsubnet.id
+  key_name                    =  "ubuntukey"
+  vpc_security_group_ids      =  ["${aws_security_group.allow_all.id}"]
+  associate_public_ip_address =  true
+}
+resource "aws_instance" "private" {
+  ami                         =  "ami-04893cdb768d0f9ee"
+  instance_type               =  "t2.micro"  
+  subnet_id                   =  aws_subnet.pvtsubnet.id
+  key_name                    =  "ubuntukey"
+  vpc_security_group_ids      =  ["${aws_security_group.allow_all.id}"]  
+}
+
+

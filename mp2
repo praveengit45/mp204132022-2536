@@ -24,4 +24,14 @@ resource "aws_subnet" "pubsubnet" {
   }
 } 
 
------ pvt subnet 
+----- pvt subnet
+
+
+resource "aws_subnet" "pvtsubnet" {
+  vpc_id     = aws_vpc.vpc10am.id
+  cidr_block = "10.0.2.0/24"
+
+  tags = {
+    Name = "pvt"
+  }
+} 
